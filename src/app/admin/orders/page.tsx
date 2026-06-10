@@ -1,8 +1,7 @@
 import { getDb } from "@/lib/db";
 import { Order } from "@/database/entities/Order";
-import { Button } from "@/components/ui/button";
-import { Eye, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import OrderActions from "@/components/admin/OrderActions";
 
 export default async function AdminOrdersPage() {
   let orders: any[] = [];
@@ -42,20 +41,16 @@ export default async function AdminOrdersPage() {
                 <td className="p-4 font-medium">{order.user?.name || order.user?.phoneNumber || "Guest"}</td>
                 <td className="p-4 text-xs">{new Date(order.createdAt).toLocaleDateString()}</td>
                 <td className="p-4 font-bold">₹{Number(order.totalAmount).toLocaleString()}</td>
-                <td className="p-4">
+                <td className="p-4 space-x-2">
                   <Badge variant={order.paymentStatus === 'PAID' ? 'default' : 'secondary'} className="rounded-none uppercase text-[9px]">
                     {order.paymentStatus}
                   </Badge>
+                  <Badge variant="outline" className="rounded-none uppercase text-[9px]">
+                    {order.orderStatus}
+                  </Badge>
                 </td>
                 <td className="p-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
-                      <Truck className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <OrderActions orderId={order.id} currentStatus={order.orderStatus} />
                 </td>
               </tr>
             ))}

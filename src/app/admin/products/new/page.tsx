@@ -22,6 +22,7 @@ export default function NewProductPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<string[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([]);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -35,6 +36,13 @@ export default function NewProductPage() {
     weight: "",
     categoryId: "",
     featured: false,
+  });
+
+  useState(() => {
+    fetch("/api/categories")
+      .then(res => res.json())
+      .then(data => setCategories(data))
+      .catch(err => console.error("Error fetching categories:", err));
   });
 
   const handleUpload = (result: any) => {
@@ -218,10 +226,11 @@ export default function NewProductPage() {
                     <SelectValue placeholder="Select Category" />
                   </SelectTrigger>
                   <SelectContent className="rounded-none">
-                     <SelectItem value="rings">Rings</SelectItem>
-                     <SelectItem value="necklaces">Necklaces</SelectItem>
-                     <SelectItem value="bracelets">Bracelets</SelectItem>
-                     <SelectItem value="earrings">Earrings</SelectItem>
+                     {categories.map((category) => (
+                       <SelectItem key={category.id} value={category.slug}>
+                         {category.name}
+                       </SelectItem>
+                     ))}
                   </SelectContent>
                 </Select>
               </div>

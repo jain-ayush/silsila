@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { ProductService } from "@/database/services/ProductService"; // For DB access
 import { getDb } from "@/lib/db";
 import { User, UserRole } from "@/database/entities/User";
+import { OTPService } from "@/lib/auth/otp";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -20,9 +21,8 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.phoneNumber || !credentials?.otp) return null;
 
-        // VERIFICATION LOGIC (Mocked for now)
-        // In production, verify the OTP against your provider (Firebase/MSG91/Twilio)
-        const isValidOTP = credentials.otp === "123456"; // MOCK OTP
+        // VERIFICATION LOGIC
+        const isValidOTP = await OTPService.verifyOTP(credentials.phoneNumber, credentials.otp);
 
         if (isValidOTP) {
           const db = await getDb();

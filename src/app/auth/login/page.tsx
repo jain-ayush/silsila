@@ -16,11 +16,21 @@ export default function LoginPage() {
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Mock sending OTP
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumber }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send OTP");
+      
       setStep(2);
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleVerifyOTP = async (e: React.FormEvent) => {

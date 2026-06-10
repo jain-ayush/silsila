@@ -104,4 +104,28 @@ export class ProductService {
       .where("product.id IN (:...ids)", { ids })
       .getMany();
   }
+
+  static async deductStock(items: { productId: string; quantity: number }[]) {
+    const db = await getDb();
+    
+    return await db.transaction(async (transactionalEntityManager) => {
+      for (const item of items) {
+        const product = await transactionalEntityManager.findOne(Product, {
+          where: { id: item.productId },
+          lock: { mode: "pessimistic_write" } // Prevent race conditions
+        });
+
+        if (!product) {
+          throw new Error(`Product with ID ${item.productId} not found`);
+        }
+
+        if (product.stock < item.quantity) {
+          throw new Error(`Insufficient stock for product: ${product.title}`);
+        }
+
+        product.stock -= item.quantity;
+        await transactionalEntityManager.save(product);
+      }
+    });
+  }
 }
