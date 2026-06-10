@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/store/useCartStore";
 import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
+import { trackMetaEvent } from "./meta/MetaPixel";
 
 interface AddToCartButtonProps {
   product: {
@@ -32,6 +33,15 @@ const AddToCartButton = ({ product }: AddToCartButtonProps) => {
       quantity: quantity,
       stock: product.stock,
       category: product.category,
+    });
+
+    // Track Meta Event
+    trackMetaEvent("AddToCart", {
+      content_ids: [product.id],
+      content_name: product.title,
+      content_type: "product",
+      value: product.price * quantity,
+      currency: "INR",
     });
   };
 

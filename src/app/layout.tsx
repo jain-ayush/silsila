@@ -5,6 +5,8 @@ import "./globals.css";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
 import { Providers } from "@/components/shared/Providers";
+import { MetaPixel } from "@/components/storefront/meta/MetaPixel";
+import { Suspense } from "react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +35,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <Providers>
+          <Suspense fallback={null}>
+            <MetaPixel />
+          </Suspense>
           <Navbar />
           <main className="flex-grow">{children}</main>
           <Footer />

@@ -4,6 +4,38 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Share2, ShieldCheck, Truck, RotateCcw } from "lucide-react";
 import AddToCartButton from "@/components/storefront/AddToCartButton";
+import { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const product = await ProductService.getProductBySlug(slug);
+
+  if (!product) return { title: "Product Not Found | Silsila" };
+
+  const baseUrl = process.env.NEXTAUTH_URL || "https://silsila.com";
+
+  return {
+    title: `${product.title} | Silsila Silver Jewellery`,
+    description: product.description.substring(0, 160),
+    openGraph: {
+      title: product.title,
+      description: product.description.substring(0, 160),
+      url: `${baseUrl}/products/${slug}`,
+      images: [{ url: product.images?.[0]?.url || "" }],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: product.title,
+      description: product.description.substring(0, 160),
+      images: [product.images?.[0]?.url || ""],
+    },
+  };
+}
 
 export default async function ProductDetailsPage({
   params,
@@ -30,8 +62,33 @@ export default async function ProductDetailsPage({
     ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)
     : 0;
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": product.title,
+    "image": product.images?.map((img: any) => img.url),
+    "description": product.description,
+    "sku": product.sku,
+    "brand": {
+      "@type": "Brand",
+      "name": "Silsila"
+    },
+    "offers": {
+      "@type": "Offer",
+      "url": `${process.env.NEXTAUTH_URL}/products/${product.slug}`,
+      "priceCurrency": "INR",
+      "price": product.price,
+      "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      "itemCondition": "https://schema.org/NewCondition"
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* Product Images */}
         <div className="space-y-4">

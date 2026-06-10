@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Input } from "@/components/ui/button"; // Wait, button? No, let's use standard input
 
 export default function PriceFilter({ initialMin, initialMax }: { initialMin: string, initialMax: string }) {
   const router = useRouter();
