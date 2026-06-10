@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CldUploadWidget } from "next-cloudinary";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,17 +15,15 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { ImagePlus, X, Save, ArrowLeft, Loader2 } from "lucide-react";
+import { ImagePlus, X, Save, ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 
-export default function EditProductPage() {
+export default function EditProductPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const params = useParams();
-  const id = params.id as string;
-  
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [images, setImages] = useState<string[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([]);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -42,37 +40,43 @@ export default function EditProductPage() {
   });
 
   useEffect(() => {
-    const fetchProduct = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch(`/api/admin/products/${id}`);
-        if (!res.ok) throw new Error("Product not found");
-        const data = await res.json();
-        
-        setFormData({
-          title: data.title,
-          slug: data.slug,
-          description: data.description,
-          price: data.price.toString(),
-          comparePrice: data.comparePrice?.toString() || "",
-          stock: data.stock.toString(),
-          sku: data.sku,
-          purity: data.purity,
-          weight: data.weight.toString(),
-          categoryId: data.category?.slug || "",
-          featured: data.featured,
-        });
-        setImages(data.images.map((img: any) => img.url));
+        const [prodRes, catRes] = await Promise.all([
+          fetch(`/api/admin/products/${params.id}`),
+          fetch("/api/categories")
+        ]);
+
+        const prodData = await prodRes.json();
+        const catData = await catRes.json();
+
+        setCategories(catData);
+
+        if (prodRes.ok) {
+          setFormData({
+            title: prodData.title,
+            slug: prodData.slug,
+            description: prodData.description,
+            price: prodData.price.toString(),
+            comparePrice: prodData.comparePrice?.toString() || "",
+            stock: prodData.stock.toString(),
+            sku: prodData.sku,
+            purity: prodData.purity,
+            weight: prodData.weight.toString(),
+            categoryId: prodData.category?.slug || "",
+            featured: prodData.featured,
+          });
+          setImages(prodData.images.map((img: any) => img.url));
+        }
       } catch (error) {
-        console.error(error);
-        alert("Error loading product");
-        router.push("/admin/products");
+        console.error("Error fetching product:", error);
       } finally {
         setFetching(false);
       }
     };
 
-    if (id) fetchProduct();
-  }, [id, router]);
+    fetchData();
+  }, [params.id]);
 
   const handleUpload = (result: any) => {
     if (result.event === "success") {
@@ -89,8 +93,8 @@ export default function EditProductPage() {
     setLoading(true);
     
     try {
-      const res = await fetch(`/api/admin/products/${id}`, {
-        method: "PATCH",
+      const res = await fetch(`/api/admin/products/${params.id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...formData, images }),
       });
@@ -107,9 +111,30 @@ export default function EditProductPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+    
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/products/${params.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete product");
+      
+      router.push("/admin/products");
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      alert("Error deleting product");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (fetching) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center h-[50vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -117,13 +142,23 @@ export default function EditProductPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-20">
-      <div className="flex items-center gap-4">
-        <Link href="/admin/products">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <h1 className="text-2xl font-bold uppercase tracking-widest">Edit Jewellery</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/admin/products">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <h1 className="text-2xl font-bold uppercase tracking-widest">Edit Product</h1>
+        </div>
+        <Button 
+          variant="destructive" 
+          onClick={handleDelete}
+          disabled={loading}
+          className="rounded-none uppercase tracking-widest text-[10px] font-bold"
+        >
+          <Trash2 className="h-4 w-4 mr-2" /> Delete Product
+        </Button>
       </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -189,7 +224,13 @@ export default function EditProductPage() {
                 {({ open }) => (
                   <button
                     type="button"
-                    onClick={() => open()}
+                    onClick={() => {
+                      if (!process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME === "your_cloudinary_name") {
+                        alert("Cloudinary Cloud Name is not configured in .env file.");
+                        return;
+                      }
+                      open();
+                    }}
                     className="aspect-[3/4] border-2 border-dashed flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-primary hover:border-primary transition-all"
                   >
                     <ImagePlus className="h-8 w-8" />
@@ -260,10 +301,11 @@ export default function EditProductPage() {
                     <SelectValue placeholder="Select Category" />
                   </SelectTrigger>
                   <SelectContent className="rounded-none">
-                     <SelectItem value="rings">Rings</SelectItem>
-                     <SelectItem value="necklaces">Necklaces</SelectItem>
-                     <SelectItem value="bracelets">Bracelets</SelectItem>
-                     <SelectItem value="earrings">Earrings</SelectItem>
+                     {categories.map((category) => (
+                       <SelectItem key={category.id} value={category.slug}>
+                         {category.name}
+                       </SelectItem>
+                     ))}
                   </SelectContent>
                 </Select>
               </div>

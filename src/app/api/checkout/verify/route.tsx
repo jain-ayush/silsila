@@ -7,6 +7,7 @@ import { Payment } from "@/database/entities/Payment";
 import { sendMetaEvent } from "@/lib/meta/conversions-api";
 import { Resend } from 'resend';
 import { OrderConfirmationEmail } from "@/components/emails/OrderConfirmation";
+import { ProductService } from "@/database/services/ProductService";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -48,6 +49,19 @@ export async function POST(req: NextRequest) {
           status: "SUCCESS",
         });
         await paymentRepo.save(payment);
+
+        // Deduct Stock
+        try {
+          const itemsToDeduct = (order as any).items.map((i: any) => ({
+            productId: i.productId,
+            quantity: i.quantity
+          }));
+          await ProductService.deductStock(itemsToDeduct);
+        } catch (stockErr) {
+          console.error("Stock Deduction Error:", stockErr);
+          // In production, you might want to alert admin here if stock deduction fails 
+          // even after payment is success (though transaction in deductStock should handle concurrency)
+        }
 
         // Send Confirmation Email
         if (resend && (order as any).user?.email) {
